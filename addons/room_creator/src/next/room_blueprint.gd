@@ -23,3 +23,18 @@ extends Resource
 @export_group("Physics")
 @export_flags_3d_physics var collision_layer: int = 1
 @export_flags_3d_physics var collision_mask: int = 1
+
+
+## Stable geometry/physics signature for bake freshness across save/reload.
+## Material edits require an explicit re-bake, as in LevelLayout.fingerprint().
+func fingerprint() -> String:
+	var opening_data: Array = []
+	for opening: RoomOpening in openings:
+		if opening == null:
+			opening_data.append(null)
+		else:
+			opening_data.append([opening.stable_id, opening.wall, opening.kind,
+				opening.offset, opening.width, opening.height, opening.sill_height, opening.enabled])
+	return var_to_bytes([stable_id, shape, shape_rotation, room_size,
+		wall_thickness, floor_thickness, ceiling_thickness, include_ceiling,
+		opening_data, agent_radius, agent_height, collision_layer, collision_mask]).hex_encode().sha256_text()

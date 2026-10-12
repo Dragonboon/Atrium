@@ -84,6 +84,7 @@ static func build(blueprint: RoomBlueprint, with_collisions: bool = true) -> Nod
 	var root := Node3D.new()
 	root.name = "RoomGeometry"
 	root.set_meta("room_creator_generated", true)
+	root.set_meta("blueprint_fingerprint", blueprint.fingerprint())
 	if blueprint.shape != RoomFootprint.Shape.RECTANGLE:
 		_build_orthogonal_shape(root, blueprint, with_collisions)
 		for opening in blueprint.openings:

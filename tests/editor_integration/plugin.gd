@@ -418,6 +418,8 @@ func _exercise() -> void:
 	if not _check(reopen_pair != null, "Exported yaw editor scene must reload."):
 		return
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(yaw_lab.export_path))
+	if not await _exercise_manual_room():
+		return
 	print("DUNGEON_EDITOR_INTEGRATION: PASS")
 	get_tree().quit(0)
 
@@ -439,3 +441,39 @@ func _check(ok: bool, message: String) -> bool:
 		push_error("DUNGEON_EDITOR_INTEGRATION: FAIL: " + message)
 		get_tree().quit(1)
 	return ok
+
+
+func _exercise_manual_room() -> bool:
+	# Independent temporary fixture; never save over the designer's example.
+	var fixture_path: String = "res://tests/manual_room_editor_fixture.tscn"
+	var fixture: RoomAuthoring3D = RoomAuthoring3D.new()
+	fixture.name = "ManualRoomFixture"
+	fixture.blueprint = RoomBlueprint.new()
+	var packed: PackedScene = PackedScene.new()
+	var error: Error = packed.pack(fixture)
+	fixture.free()
+	if not _check(error == OK and ResourceSaver.save(packed, fixture_path) == OK, "Manual room fixture must save."):
+		return false
+	EditorInterface.open_scene_from_path(fixture_path)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var author: RoomAuthoring3D = EditorInterface.get_edited_scene_root() as RoomAuthoring3D
+	if not _check(author != null, "Manual authoring fixture must open in the editor."):
+		return false
+	author.bake()
+	var history: EditorUndoRedoManager = EditorInterface.get_editor_undo_redo()
+	var scene_history: UndoRedo = history.get_history_undo_redo(history.get_object_history_id(author))
+	if not _check(author.get_node_or_null(RoomAuthoring3D.BAKE_NAME) != null, "Manual Bake creates geometry."):
+		return false
+	scene_history.undo()
+	if not _check(author.get_node_or_null(RoomAuthoring3D.BAKE_NAME) == null, "Undo removes the manual bake."):
+		return false
+	scene_history.redo()
+	var baked: Node3D = author.get_node_or_null(RoomAuthoring3D.BAKE_NAME) as Node3D
+	if not _check(baked != null and baked.owner == null, "Redo restores transient manual geometry."):
+		return false
+	var source: PackedScene = PackedScene.new()
+	if not _check(source.pack(author) == OK and source.get_state().get_node_count() == 1, "Manual source save excludes generated nodes after Undo/Redo."):
+		return false
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(fixture_path))
+	return true

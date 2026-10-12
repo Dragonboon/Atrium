@@ -390,7 +390,14 @@ func clear_bake() -> void:
 	_commit_generated_action(BAKE_NAME, null, "Clear Dungeon Bake")
 
 
+## Every attempt reports its return code, including missing/stale bakes.
 func save_scene() -> Error:
+	var error: Error = _save_scene()
+	export_finished.emit(output_scene_path, error)
+	return error
+
+
+func _save_scene() -> Error:
 	if not validate_current_layout().is_valid():
 		return ERR_INVALID_DATA
 	var baked := _get_generated(BAKE_NAME)
@@ -417,7 +424,6 @@ func save_scene() -> Error:
 		push_error("DungeonAuthoring3D: Export failed with error %d." % error)
 	elif Engine.is_editor_hint():
 		EditorInterface.get_resource_filesystem().scan()
-	export_finished.emit(output_scene_path, error)
 	return error
 
 

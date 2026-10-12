@@ -8,6 +8,16 @@ A self-contained, editor-first plugin for creating manual 3D rooms and **determi
 
 Copy the directory `addons/room_creator/` to the same path in your Godot project and enable **Room Creator** under Project Settings → Plugins. No Barebone or OmniKit dependency is needed. The built scenes use only stock engine nodes and can be used without the addon.
 
+## Choose your workflow
+
+| Goal | Entry point |
+| --- | --- |
+| Author one room with doors/windows | [Manual room workflow](#create-a-manual-room-f1), `RoomAuthoring3D` + `RoomBlueprint` |
+| Generate a connected dungeon | `examples/dungeon_authoring.tscn`, `DungeonAuthoring3D` + `DungeonConfig` |
+| Select, lock, paint or extend rooms | [Editor workspace](docs/EDITOR_WORKSPACE.md) |
+| Integrate generation from code | [API](#api) |
+| Understand supported scope and remaining work | [F3 progress](docs/F3_PROGRESS.md), [roadmap](docs/ROADMAP.md) |
+
 ## Godot editor modular preview hotfix (1.5.1)
 
 If `examples/dungeon_authoring.tscn` previously spammed `Attempting to parent and popup a dialog that already has a parent` on **Generate Layout** or **Preview Layout**, update the addon to **1.5.1** and restart the Godot editor.
@@ -329,6 +339,23 @@ The generator selects modules deterministically **only when their markers, shape
 2. Create a `RoomBlueprint` and configure room dimensions (width/height/depth), thicknesses and optional materials.
 3. Under **Openings**, create one or more `RoomOpening` resources and choose a wall: `FRONT` (-Z), `BACK` (+Z), `LEFT` (-X), `RIGHT` (+X). Use `offset`, `width`, `height`, and `sill_height`. Walkable doors/arches must start at floor level.
 4. Use **Validate Blueprint → Generate Preview → Bake Static Room → Save Baked Scene**. You can keep the blueprint and re-bake without editing the generated meshes destructively.
+
+### Source scenes and native output
+
+For both manual rooms and dungeons, **ordinary scene saving preserves the editable source** and designer-owned children. Generated preview/bake roots are transient; recreate them after reopening. **Save Baked Scene** exports the standalone native geometry and collisions explicitly.
+
+Manual rooms now attach a `RoomBlueprint.fingerprint()` to each generated result. Export rejects missing, invalid or geometrically stale bakes without deleting the last valid output. Re-bake after changing dimensions, openings, silhouette, thickness, ceiling or physics/clearance settings. Material edits still require an explicit re-bake, as with dungeon layouts.
+
+Existing blueprints and authored scenes remain loadable. Older manual-room bakes without the fingerprint must be re-baked before export; no source Resource migration is needed. User-created children are preserved. Previously exported standalone scenes remain usable.
+
+`RoomAuthoring3D.save_scene()` and `DungeonAuthoring3D.save_scene()` return an `Error` and emit `export_finished(path, error)` **once for every attempt**, including validation failures. Host UI can therefore finish a pending operation consistently:
+
+```gdscript
+func export_room(author: RoomAuthoring3D) -> void:
+    var error: Error = author.save_scene()
+    if error != OK:
+        push_warning("Export rejected: %s. Check validation and re-bake if needed." % error_string(error))
+```
 
 ## API
 
