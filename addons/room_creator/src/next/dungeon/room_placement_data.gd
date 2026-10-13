@@ -5,6 +5,8 @@ extends Resource
 
 enum Role { ENTRANCE, MAIN, EXIT, BRANCH }
 
+## Semantic use for room browsing and downstream furnishing, independent of graph role.
+@export var purpose: StringName = &""
 @export var stable_id: String = ""
 ## F3 designer-owned geometry lock, persisted inside the RoomPlacementData
 ## already stored in LevelLayout. Only lock via DungeonAuthoring3D so its

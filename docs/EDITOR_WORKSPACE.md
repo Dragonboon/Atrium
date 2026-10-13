@@ -3,6 +3,14 @@
 **Status:** F3.3 first workspace slice v1.15.0; native bottom dock plus first socket-stamp slice v1.16.0.
 **Target:** Godot 4.7.2 stable, the canonical `DungeonAuthoring3D` scene; no separate editor application, duplicate authoring scene or third-party addon dependency.
 
+## Atrium 1.17: floor-aware editing
+
+`Rooms → Active floor` chooses the existing room editor target in a building.
+The browser displays and searches room purposes; viewport rays and outlines
+respect the author transform and selected floor origin. Edits are committed only
+after whole-building validation, with the same Undo/Redo and source-only save.
+See [procedural buildings](PROCEDURAL_BUILDINGS.md) for presets and native editing.
+
 ## Analysis: Asset Placer and Terrain3D patterns
 
 - [Godot Asset Placer](https://github.com/levinzonr/godot-asset-placer) uses a dedicated asset dock, collections/palettes, explicit placement modes and immediate in-viewport preview followed by a click to confirm.

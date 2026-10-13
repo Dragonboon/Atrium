@@ -162,15 +162,15 @@ func _clear_stamp_preview() -> void:
 
 
 func _preview_stamp(room_id: String, force: bool = false) -> void:
-	if not is_instance_valid(_active_author) or _active_author.layout == null:
+	if not is_instance_valid(_active_author) or _active_author.get_edit_layout() == null:
 		_clear_stamp_preview()
 		return
 	var wall: int = _dungeon_dock.get_stamp_wall()
-	if not force and _stamp_source == room_id and _stamp_wall == wall and _stamp_layout == _active_author.layout:
+	if not force and _stamp_source == room_id and _stamp_wall == wall and _stamp_layout == _active_author.get_edit_layout():
 		return
 	_stamp_source = room_id
 	_stamp_wall = wall
-	_stamp_layout = _active_author.layout
+	_stamp_layout = _active_author.get_edit_layout()
 	_stamp_proposal = _active_author.stamp_room_candidate(room_id, wall) if not room_id.is_empty() else null
 	if _stamp_proposal != null:
 		_dungeon_dock.show_stamp_feedback("Valid branch position. Click to add." if _stamp_proposal.success else "Blocked: " + _stamp_proposal.report.summary())
@@ -179,7 +179,7 @@ func _preview_stamp(room_id: String, force: bool = false) -> void:
 func _forward_3d_gui_input(viewport_camera: Camera3D, event: InputEvent) -> int:
 	if not is_instance_valid(_active_author) or not is_instance_valid(_tool_button) or not _tool_button.button_pressed:
 		return AFTER_GUI_INPUT_PASS
-	if _active_author.layout == null:
+	if _active_author.get_edit_layout() == null:
 		return AFTER_GUI_INPUT_PASS
 	_viewport_camera = viewport_camera
 	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
@@ -188,8 +188,8 @@ func _forward_3d_gui_input(viewport_camera: Camera3D, event: InputEvent) -> int:
 		return AFTER_GUI_INPUT_STOP
 	if _dungeon_dock.active_mode == _dungeon_dock.MODE_STAMP and event is InputEventMouseMotion:
 		var motion := event as InputEventMouseMotion
-		var cursor_room := Picker.pick_room(_active_author.layout, viewport_camera.project_ray_origin(motion.position), viewport_camera.project_ray_normal(motion.position))
-		if cursor_room != _stamp_source or _stamp_layout != _active_author.layout or _stamp_wall != _dungeon_dock.get_stamp_wall():
+		var cursor_room := Picker.pick_room(_active_author.get_edit_layout(), _active_author.get_edit_transform().affine_inverse() * viewport_camera.project_ray_origin(motion.position), _active_author.get_edit_transform().basis.inverse() * viewport_camera.project_ray_normal(motion.position))
+		if cursor_room != _stamp_source or _stamp_layout != _active_author.get_edit_layout() or _stamp_wall != _dungeon_dock.get_stamp_wall():
 			_preview_stamp(cursor_room)
 			update_overlays()
 		return AFTER_GUI_INPUT_PASS
@@ -200,7 +200,7 @@ func _forward_3d_gui_input(viewport_camera: Camera3D, event: InputEvent) -> int:
 		return AFTER_GUI_INPUT_PASS
 	var ray_origin: Vector3 = viewport_camera.project_ray_origin(click.position)
 	var ray_direction: Vector3 = viewport_camera.project_ray_normal(click.position)
-	var selected: String = Picker.pick_room(_active_author.layout, ray_origin, ray_direction)
+	var selected: String = Picker.pick_room(_active_author.get_edit_layout(), _active_author.get_edit_transform().affine_inverse() * ray_origin, _active_author.get_edit_transform().basis.inverse() * ray_direction)
 	if selected.is_empty():
 		return AFTER_GUI_INPUT_PASS
 	if _dungeon_dock.active_mode == _dungeon_dock.MODE_STAMP:
@@ -213,16 +213,17 @@ func _forward_3d_gui_input(viewport_camera: Camera3D, event: InputEvent) -> int:
 func _forward_3d_draw_over_viewport(overlay: Control) -> void:
 	if not is_instance_valid(_active_author) or not is_instance_valid(_viewport_camera) or not is_instance_valid(_tool_button) or not _tool_button.button_pressed:
 		return
-	if _active_author.layout == null:
+	if _active_author.get_edit_layout() == null:
 		return
 	if _dungeon_dock.active_mode == _dungeon_dock.MODE_STAMP and not _stamp_source.is_empty():
-		if _stamp_layout != _active_author.layout or _stamp_wall != _dungeon_dock.get_stamp_wall():
+		if _stamp_layout != _active_author.get_edit_layout() or _stamp_wall != _dungeon_dock.get_stamp_wall():
 			_preview_stamp(_stamp_source, true)
-		var ghost := DungeonSocketRoomStamp.preview_pose(_active_author.layout, _stamp_source, _dungeon_dock.get_stamp_wall())
+		var ghost := DungeonSocketRoomStamp.preview_pose(_active_author.get_edit_layout(), _stamp_source, _dungeon_dock.get_stamp_wall())
 		if ghost != null:
-			var points: PackedVector3Array = Picker.room_corners(_active_author.layout, ghost)
+			var points: PackedVector3Array = Picker.room_corners(_active_author.get_edit_layout(), ghost)
 			var screen := PackedVector2Array()
-			for vertex in points:
+			for local_vertex in points:
+				var vertex: Vector3 = _active_author.get_edit_transform() * local_vertex
 				if _viewport_camera.is_position_behind(vertex):
 					screen.clear()
 					break
@@ -234,18 +235,18 @@ func _forward_3d_draw_over_viewport(overlay: Control) -> void:
 				for j in 4:
 					overlay.draw_line(screen[j], screen[(j + 1) % 4], tint, 3.0, true)
 	var room: RoomPlacementData
-	for item in _active_author.layout.rooms:
+	for item in _active_author.get_edit_layout().rooms:
 		if item.stable_id == _active_author.selected_room_id:
 			room = item
 			break
 	if room == null:
 		return
-	var corners: PackedVector3Array = Picker.room_corners(_active_author.layout, room)
+	var corners: PackedVector3Array = Picker.room_corners(_active_author.get_edit_layout(), room)
 	if corners.size() != 4:
 		return
 	for i in corners.size():
-		var a: Vector3 = corners[i]
-		var b: Vector3 = corners[(i + 1) % corners.size()]
+		var a: Vector3 = _active_author.get_edit_transform() * corners[i]
+		var b: Vector3 = _active_author.get_edit_transform() * corners[(i + 1) % corners.size()]
 		if _viewport_camera.is_position_behind(a) or _viewport_camera.is_position_behind(b):
 			continue
 		overlay.draw_line(_viewport_camera.unproject_position(a), _viewport_camera.unproject_position(b), Color(0.3, 0.85, 1.0), 3.0, true)

@@ -17,6 +17,8 @@ const GENERATED_META := "room_creator_generated"
 ## Enable to inspect every new layout immediately. Disable for very large drafts.
 @export var auto_preview_on_generate: bool = true
 @export var layout: LevelLayout
+## Select a building floor for the existing room editor; zero for ordinary dungeons.
+@export_range(0, 7, 1) var selected_floor: int = 0
 @export_group("Preview Diagnostics")
 @export var preview_palette: DungeonPreviewPalette = DungeonPreviewPalette.new()
 @export var show_room_role_colors: bool = true
@@ -201,7 +203,7 @@ func unlock_selected_room() -> bool:
 
 
 func _edit_lock(locked: bool) -> bool:
-	var result := DungeonRoomEditing.toggle_lock(layout, selected_room_id, locked)
+	var result := DungeonRoomEditing.toggle_lock(get_edit_layout(), selected_room_id, locked)
 	last_result = result
 	last_report = result.report
 	if not result.success:
@@ -212,7 +214,7 @@ func _edit_lock(locked: bool) -> bool:
 
 
 func regenerate_unlocked_rooms() -> bool:
-	var result := DungeonRoomEditing.regenerate_unlocked(layout, config, appearance_variation_seed)
+	var result := DungeonRoomEditing.regenerate_unlocked(get_edit_layout(), config, appearance_variation_seed)
 	last_result = result
 	last_report = result.report
 	if not result.success:
@@ -224,7 +226,7 @@ func regenerate_unlocked_rooms() -> bool:
 
 func apply_selected_room_override() -> bool:
 	var chosen_shape: int = manual_shape_choice - 1 if manual_shape_choice > 0 else -1
-	var result := DungeonRoomOverrides.apply(layout, selected_room_id, manual_translation, manual_room_size, chosen_shape, manual_shape_rotation)
+	var result := DungeonRoomOverrides.apply(get_edit_layout(), selected_room_id, manual_translation, manual_room_size, chosen_shape, manual_shape_rotation)
 	last_result = result
 	last_report = result.report
 	if not result.success:
@@ -236,7 +238,7 @@ func apply_selected_room_override() -> bool:
 
 
 func paint_selected_room_module() -> bool:
-	var result := DungeonRoomModulePainter.paint(layout, selected_room_id, selected_visual_module)
+	var result := DungeonRoomModulePainter.paint(get_edit_layout(), selected_room_id, selected_visual_module)
 	last_result = result
 	last_report = result.report
 	if not result.success:
@@ -249,7 +251,13 @@ func paint_selected_room_module() -> bool:
 func stamp_room_candidate(room_id: String, wall: int) -> DungeonBuildResult:
 	# Pure candidate evaluation for viewport ghost preview. Does not mutate
 	# source scene, change editor selection or create temporary tree nodes.
-	return DungeonSocketRoomStamp.propose(layout, room_id, wall, selected_visual_module)
+	var candidate := DungeonSocketRoomStamp.propose(get_edit_layout(), room_id, wall, selected_visual_module)
+	if candidate.success and layout is BuildingLayout:
+		var building := layout.duplicate(true) as BuildingLayout
+		building.floors[clampi(selected_floor, 0, building.floors.size() - 1)] = candidate.layout
+		candidate.report = BuildingPlanner.validate(building)
+		candidate.success = candidate.report.is_valid()
+	return candidate
 
 
 func stamp_selected_room() -> bool:
@@ -266,6 +274,16 @@ func stamp_selected_room() -> bool:
 
 
 func _commit_room_edit(result: DungeonBuildResult, label: String, keep_bake: bool) -> bool:
+	if layout is BuildingLayout:
+		var revised := layout.duplicate(true) as BuildingLayout
+		revised.floors[clampi(selected_floor, 0, revised.floors.size() - 1)] = result.layout
+		result.report = BuildingPlanner.validate(revised)
+		result.success = result.report.is_valid()
+		if not result.success:
+			last_report = result.report
+			generation_failed.emit(result.report)
+			return false
+		result.layout = revised
 	if not _can_replace_generated(PREVIEW_NAME) or not _can_replace_generated(BAKE_NAME):
 		result.report.add_error("GENERATED_NAME_OCCUPIED", "Cannot modify user-owned preview or bake nodes.")
 		generation_failed.emit(result.report)
@@ -319,6 +337,19 @@ func validate_current_layout() -> RoomValidationReport:
 	return last_report
 
 
+func get_edit_layout() -> LevelLayout:
+	if layout is BuildingLayout and not layout.floors.is_empty():
+		return layout.floors[clampi(selected_floor, 0, layout.floors.size() - 1)]
+	return layout
+
+
+func get_edit_transform() -> Transform3D:
+	var pose := Transform3D.IDENTITY
+	if layout is BuildingLayout and not layout.floor_origins.is_empty():
+		pose.origin = layout.floor_origins[clampi(selected_floor, 0, layout.floor_origins.size() - 1)]
+	return global_transform * pose
+
+
 func get_layout() -> LevelLayout:
 	return layout
 
@@ -333,6 +364,8 @@ func get_last_report() -> RoomValidationReport:
 
 func _build_diagnostic_preview(source: LevelLayout) -> Node3D:
 	var geometry := DungeonSceneCompiler.build(source, false)
+	if source is BuildingLayout:
+		return geometry
 	if geometry != null and (show_room_role_colors or show_connection_routes or show_entrance_exit_labels):
 		DungeonPreviewOverlay.apply(
 			geometry, source, preview_palette,

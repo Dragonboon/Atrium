@@ -1,5 +1,8 @@
 # Room Creator — Godot 4.7
 
+**Atrium 1.17:** [dungeon algorithms, procedural houses, connected floors and native editing](docs/PROCEDURAL_BUILDINGS.md). Choose an `atrium_*_preset.tres` in the existing authoring scene.
+
+
 A self-contained, editor-first plugin for creating manual 3D rooms and **deterministic connected dungeons** with static collisions, doors and portable scene export.
 
 **Supported/tested:** Godot **4.7.2 stable**. Addon version **1.16.0**. Authors: **sempitern0**.
@@ -331,7 +334,7 @@ Author module scenes in **normalized coordinates**: X/Z in -0.5…+0.5 and Y in 
 
 The generator selects modules deterministically **only when their markers, shape and rotation match all required wall connections**, including outside doors. Modules must be **script-free and collision-free**: they provide visual detail inside a procedurally validated, walkable room shell. Module instances are scaled to the chosen room dimensions, and sockets align with the actual procedural door markers. The exported `.tscn` contains engine-native geometry and the selected art scene dependencies.
 
-**Still future work:** non-cardinal door cuts within author-authored prefab shells, compound arbitrary-mesh collision, guaranteed closure of arbitrary off-grid loops, multilevel dungeons and automatic navigation meshes. F2.7 supports collision-bearing **rectangular** replacement shells with exact cardinal sockets, alongside visual-only art modules.
+**Still future work:** non-cardinal door cuts within author-authored prefab shells, compound arbitrary-mesh collision, guaranteed closure of arbitrary off-grid loops, unrestricted rotated multilevel packing and automatic navigation meshes. F2.7 supports collision-bearing **rectangular** replacement shells with exact cardinal sockets, alongside visual-only art modules.
 
 ## Create a manual room (F1)
 

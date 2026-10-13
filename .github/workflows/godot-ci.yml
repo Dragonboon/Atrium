@@ -134,7 +134,7 @@ jobs:
         run: |
           set -o pipefail
           cp project.godot /tmp/room-creator-editor-project.godot
-          trap 'cp /tmp/room-creator-editor-project.godot project.godot' EXIT
+          trap 'cp /tmp/room-creator-editor-project.godot project.godot; rm -f tests/manual_room_editor_fixture.tscn tests/building_editor_fixture.tscn tests/building_editor_export.tscn' EXIT
           python3 - <<'PY'
           from pathlib import Path
           p = Path('project.godot')
@@ -156,7 +156,7 @@ jobs:
         run: |
           set -o pipefail
           cp project.godot /tmp/room-creator-xvfb-project.godot
-          trap 'cp /tmp/room-creator-xvfb-project.godot project.godot' EXIT
+          trap 'cp /tmp/room-creator-xvfb-project.godot project.godot; rm -f tests/manual_room_editor_fixture.tscn tests/building_editor_fixture.tscn tests/building_editor_export.tscn' EXIT
           python3 - <<'PY'
           from pathlib import Path
           p = Path('project.godot')
@@ -277,3 +277,14 @@ jobs:
           ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/dungeon_socket_room_stamp_smoke.gd 2>&1 | tee room-stamp.log
           grep 'DUNGEON_ROOM_STAMP_SMOKE: PASS' room-stamp.log
           if grep -E 'SCRIPT ERROR|Parse Error|DUNGEON_ROOM_STAMP_SMOKE: FAIL' room-stamp.log; then exit 1; fi
+
+      - name: Verify Atrium algorithms, building editing and stair physics
+        shell: bash
+        run: |
+          set -o pipefail
+          for test in atrium_generation atrium_stairs; do
+            ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --fixed-fps 60 \
+              --script "res://tests/${test}_smoke.gd" 2>&1 | tee "${test}.log"
+            grep ': PASS' "${test}.log"
+            if grep -E 'SCRIPT ERROR|Parse Error|Compile Error|: FAIL' "${test}.log"; then exit 1; fi
+          done

@@ -1,8 +1,19 @@
 @tool
 class_name DungeonConfig
 extends Resource
-## F2 grid-embedded, single-floor dungeon settings. Distances are meters.
+## Seeded topology and optional stacked-building settings. Distances are meters.
+## Existing resources default to the original single-floor critical-path solver.
 
+enum Algorithm { CRITICAL_PATH, DEPTH_FIRST_TREE, RANDOM_FRONTIER_TREE, HALLWAY_HOUSE }
+
+## The original path/branch solver remains the default for existing resources.
+@export var algorithm: Algorithm = Algorithm.CRITICAL_PATH
+@export_group("Building composition")
+## One preserves the original single-floor behavior. Two or more reserve a stair wing.
+@export_range(1, 8, 1) var floor_count: int = 1
+@export_range(3.0, 12.0, 0.1) var floor_height: float = 4.0
+@export_range(1.0, 4.0, 0.1) var stair_width: float = 1.8
+@export_group("Topology")
 @export var seed: int = 12345
 @export var grid_size: Vector2i = Vector2i(12, 12)
 @export_range(2, 300, 1) var critical_path_min: int = 8

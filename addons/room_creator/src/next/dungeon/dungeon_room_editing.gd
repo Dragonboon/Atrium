@@ -39,6 +39,10 @@ static func validate_locks(layout: LevelLayout) -> RoomValidationReport:
 
 
 static func any_locked(layout: LevelLayout) -> bool:
+	if layout is BuildingLayout:
+		for floor_layout in layout.floors:
+			if any_locked(floor_layout):
+				return true
 	if layout == null:
 		return false
 	for room in layout.rooms:

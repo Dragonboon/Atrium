@@ -61,6 +61,8 @@ func fingerprint() -> String:
 	parts.append("rooms:%d edges:%d" % [rooms.size(), connections.size()])
 	for room in rooms:
 		parts.append("%s:%d,%d:%d:%.4f,%.4f,%.4f:%d,%d:%d:%s:%.4f,%.4f,%.4f:%s:%d:%s" % [room.stable_id, room.cell.x, room.cell.y, room.role, room.world_transform.origin.x, room.world_transform.origin.y, room.world_transform.origin.z, room.shape, room.shape_rotation, room.exterior_wall, room.exterior_id, room.room_size.x, room.room_size.y, room.room_size.z, room.module_profile.stable_id if room.module_profile != null else "", room.structural_turns, room.structural_prefab.stable_id if room.structural_prefab != null else ""])
+	if rooms.any(func(r: RoomPlacementData) -> bool: return not r.purpose.is_empty()):
+		parts.append("purposes:%s" % str(rooms.map(func(r: RoomPlacementData) -> StringName: return r.purpose)))
 	parts.append("room_bases:%s" % str(rooms.map(func(r: RoomPlacementData) -> Basis: return r.world_transform.basis)))
 	parts.append("exterior_offsets:%s" % str(rooms.map(func(r: RoomPlacementData) -> float: return r.exterior_offset)))
 	for edge in connections:

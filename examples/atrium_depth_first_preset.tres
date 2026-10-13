@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="DungeonConfig" load_steps=2 format=3]
+[ext_resource type="Script" path="res://addons/room_creator/src/next/dungeon/dungeon_config.gd" id="1"]
+[resource]
+script = ExtResource("1")
+algorithm = 1
+grid_size = Vector2i(10, 10)
+critical_path_min = 5
+critical_path_max = 10
+branch_count = 10

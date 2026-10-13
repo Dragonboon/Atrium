@@ -420,6 +420,8 @@ func _exercise() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(yaw_lab.export_path))
 	if not await _exercise_manual_room():
 		return
+	if not await _exercise_building():
+		return
 	print("DUNGEON_EDITOR_INTEGRATION: PASS")
 	get_tree().quit(0)
 
@@ -475,5 +477,55 @@ func _exercise_manual_room() -> bool:
 	var source: PackedScene = PackedScene.new()
 	if not _check(source.pack(author) == OK and source.get_state().get_node_count() == 1, "Manual source save excludes generated nodes after Undo/Redo."):
 		return false
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(fixture_path))
+	# The launcher removes this fixture after the editor closes its scene.
+	return true
+
+
+func _exercise_building() -> bool:
+	var fixture_path := "res://tests/building_editor_fixture.tscn"
+	var fixture := DungeonAuthoring3D.new()
+	fixture.name = "BuildingFixture"
+	fixture.config = load("res://examples/atrium_house_preset.tres")
+	var source := PackedScene.new()
+	var error: Error = source.pack(fixture)
+	fixture.free()
+	if not _check(error == OK and ResourceSaver.save(source, fixture_path) == OK, "Building fixture saves."):
+		return false
+	EditorInterface.open_scene_from_path(fixture_path)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var author := EditorInterface.get_edited_scene_root() as DungeonAuthoring3D
+	author._request_generate_layout()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if not _check(author.layout is BuildingLayout, "Inspector generates a building."):
+		return false
+	var history := EditorInterface.get_editor_undo_redo()
+	var undo := history.get_history_undo_redo(history.get_object_history_id(author))
+	undo.undo()
+	if not _check(author.layout == null, "Undo removes whole building transaction."):
+		return false
+	undo.redo()
+	author.selected_floor = 1
+	author.selected_room_id = author.get_edit_layout().rooms[3].stable_id
+	var before := author.layout
+	author.lock_selected_room()
+	if not _check(author.get_edit_layout().rooms[3].edit_locked and not author.layout.floors[0].rooms[3].edit_locked, "Lock affects only selected storey."):
+		return false
+	undo.undo()
+	if not _check(author.layout == before, "Undo restores entire source after floor edit."):
+		return false
+	undo.redo()
+	author.bake()
+	author.output_scene_path = "res://tests/building_editor_export.tscn"
+	if not _check(author.save_scene() == OK, "Inspector exports native building."):
+		return false
+	var native := (ResourceLoader.load(author.output_scene_path, "", ResourceLoader.CACHE_MODE_IGNORE) as PackedScene).instantiate()
+	if not _check(native.has_node("Floor_01") and native.has_node("Stairwell"), "Export preserves floor and stair nodes."):
+		return false
+	native.free()
+	var saved := PackedScene.new()
+	if not _check(saved.pack(author) == OK and saved.get_state().get_node_count() == 1, "Source saves only its persistent resources."):
+		return false
+	# The launcher removes this fixture after the editor closes its scene.
 	return true

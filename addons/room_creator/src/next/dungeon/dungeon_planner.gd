@@ -14,6 +14,8 @@ static func generate_layout(config: DungeonConfig) -> DungeonBuildResult:
 	if config == null:
 		result.report.add_error("CONFIG_MISSING", "Assign a DungeonConfig.")
 		return result
+	if config.floor_count != 1:
+		return BuildingPlanner.generate(config)
 	result.seed = config.seed
 	result.report = validate_config(config)
 	if not result.report.is_valid():
@@ -22,6 +24,15 @@ static func generate_layout(config: DungeonConfig) -> DungeonBuildResult:
 	rng.seed = config.seed
 	for attempt in range(config.max_attempts):
 		result.attempts = attempt + 1
+		if config.algorithm != DungeonConfig.Algorithm.CRITICAL_PATH:
+			var alternative := DungeonTopologyAlgorithms.create(config, rng)
+			var report := _finish_layout(config, alternative, rng) if alternative != null else null
+			if report != null and report.is_valid():
+				result.success = true
+				result.layout = alternative
+				result.report = report
+				return result
+			continue
 		var target: int = rng.randi_range(config.critical_path_min, config.critical_path_max)
 		var start := Vector2i(rng.randi_range(0, config.grid_size.x - 1), rng.randi_range(0, config.grid_size.y - 1))
 		var path: Array[Vector2i] = [start]
@@ -39,22 +50,8 @@ static func generate_layout(config: DungeonConfig) -> DungeonBuildResult:
 			continue
 		if not _add_loops(config, layout, occupied, rng):
 			continue
-		if not _assign_exterior_walls(layout, rng):
-			continue
-		if not _assign_room_shapes(config, layout, rng):
-			continue
-		_assign_room_sizes(config, layout, rng)
-		DungeonSpatialEmbedder.embed(config, layout, rng)
-		if not DungeonRoomOffsetSolver.assign(config, layout, rng):
-			continue
-		if not _assign_room_modules(config, layout, rng):
-			continue
-		_assign_structural_prefabs(config, layout, rng)
-		DungeonSocketOffsetPlacer.resolve(layout)
-		if not DungeonFreeYawPlacement.assign(config, layout, rng):
-			continue
-		var report := validate_layout(layout)
-		if report.is_valid():
+		var report := _finish_layout(config, layout, rng)
+		if report != null and report.is_valid():
 			result.success = true
 			result.layout = layout
 			result.report = report
@@ -64,11 +61,34 @@ static func generate_layout(config: DungeonConfig) -> DungeonBuildResult:
 	return result
 
 
+static func _finish_layout(config: DungeonConfig, layout: LevelLayout, rng: RandomNumberGenerator) -> RoomValidationReport:
+	if not _assign_exterior_walls(layout, rng) or not _assign_room_shapes(config, layout, rng):
+		return null
+	_assign_room_sizes(config, layout, rng)
+	DungeonSpatialEmbedder.embed(config, layout, rng)
+	if not DungeonRoomOffsetSolver.assign(config, layout, rng):
+		return null
+	if not _assign_room_modules(config, layout, rng):
+		return null
+	_assign_structural_prefabs(config, layout, rng)
+	DungeonSocketOffsetPlacer.resolve(layout)
+	if not DungeonFreeYawPlacement.assign(config, layout, rng):
+		return null
+	return validate_layout(layout)
+
+
 static func validate_config(config: DungeonConfig) -> RoomValidationReport:
 	var report := RoomValidationReport.new()
 	if config == null:
 		report.add_error("CONFIG_MISSING", "Assign a DungeonConfig.")
 		return report
+	if config.algorithm < 0 or config.algorithm > DungeonConfig.Algorithm.HALLWAY_HOUSE:
+		report.add_error("ALGORITHM", "Select a supported topology algorithm.")
+	if config.algorithm == DungeonConfig.Algorithm.HALLWAY_HOUSE:
+		if config.grid_size.x != 3 or config.grid_size.y < 2 or config.grid_size.y > 12:
+			report.add_error("HOUSE_GRID", "Hallway houses need three columns and 2–12 rows.")
+		if config.critical_path_min > config.grid_size.y or config.loop_count != 0:
+			report.add_error("HOUSE_PATH", "House critical minimum must fit the hall; loops must be zero.")
 	var grid := config.grid_size
 	if grid.x < 1 or grid.y < 1 or grid.x > MAX_GRID_SIDE or grid.y > MAX_GRID_SIDE:
 		report.add_error("GRID_SIZE", "Grid axes must be between 1 and %d." % MAX_GRID_SIDE)
@@ -76,7 +96,7 @@ static func validate_config(config: DungeonConfig) -> RoomValidationReport:
 	var cells: int = grid.x * grid.y
 	if config.critical_path_min < 2 or config.critical_path_max < config.critical_path_min or config.critical_path_max > cells:
 		report.add_error("CRITICAL_PATH", "Critical path range must fit the grid and contain at least two rooms.")
-	if config.branch_count < 0 or config.branch_count + config.critical_path_max > cells:
+	if config.branch_count < 0 or (config.algorithm != DungeonConfig.Algorithm.HALLWAY_HOUSE and config.branch_count + config.critical_path_max > cells):
 		report.add_error("BRANCH_CAPACITY", "Requested branches and maximum critical path do not fit the grid.")
 	if config.loop_count < 0:
 		report.add_error("LOOP_COUNT", "Loop count cannot be negative.")
@@ -441,6 +461,8 @@ static func _assign_structural_prefabs(config: DungeonConfig, layout: LevelLayou
 
 
 static func validate_layout(layout: LevelLayout) -> RoomValidationReport:
+	if layout is BuildingLayout:
+		return BuildingPlanner.validate(layout)
 	var report := RoomValidationReport.new()
 	if layout == null:
 		report.add_error("LAYOUT_MISSING", "No layout was generated.")

@@ -2,6 +2,14 @@
 
 Architecture derived from `ROOM_CREATOR_NEXT_AGENT_HANDOFF(1).md` (design proposal, not code). Godot **4.7.2 stable**, addon path `addons/room_creator/`. Source, APIs and documentation are written in English.
 
+## Atrium 1.17 additions
+
+The [procedural buildings guide](PROCEDURAL_BUILDINGS.md) defines the new supported
+scope: selectable critical-path/depth-first/random-frontier/house topology,
+2–8 cardinal floors with an enclosed switchback stair wing, selected-floor F3
+transactions and native editable export. The historical F2 acceptance below
+remains the single-floor baseline; unrestricted 3D packing is still excluded.
+
 ## Current architecture
 
 | Area | Status | Contract |

@@ -17,6 +17,7 @@ const MODE_STAMP: int = 4
 
 var author: DungeonAuthoring3D
 var active_mode: int = MODE_SELECT
+var _floor_picker: OptionButton
 var _tracked_layout: LevelLayout
 var _tracked_id: String = ""
 var _refresh_timer: float = 0.0
@@ -79,9 +80,9 @@ func set_mode(value: int) -> void:
 
 
 func select_room(room_id: String) -> bool:
-	if author == null or author.layout == null:
+	if author == null or author.get_edit_layout() == null:
 		return false
-	for room in author.layout.rooms:
+	for room in author.get_edit_layout().rooms:
 		if room.stable_id == room_id:
 			author.selected_room_id = room_id
 			_refresh()
@@ -119,7 +120,7 @@ func _process(delta: float) -> void:
 		if author != null:
 			set_author(null)
 		return
-	if author.layout != _tracked_layout or author.selected_room_id != _tracked_id or author.config != _palette_source:
+	if author.get_edit_layout() != _tracked_layout or author.selected_room_id != _tracked_id or author.config != _palette_source:
 		_refresh()
 
 
@@ -182,6 +183,14 @@ func _build() -> void:
 	var edit := VBoxContainer.new()
 	edit.custom_minimum_size.x = 268
 	rooms.add_child(edit)
+	_heading(tools, "Active floor")
+	_floor_picker = OptionButton.new()
+	_floor_picker.item_selected.connect(func(index: int) -> void:
+		if is_instance_valid(author):
+			author.selected_floor = index
+			_refresh()
+	)
+	tools.add_child(_floor_picker)
 	_heading(tools, "Viewport tool")
 	_mode_picker = OptionButton.new()
 	_mode_picker.add_item("Select room", MODE_SELECT)
@@ -399,10 +408,10 @@ func _fill_rooms() -> void:
 		return
 	_room_list.clear()
 	_room_ids.clear()
-	if author == null or author.layout == null:
+	if author == null or author.get_edit_layout() == null:
 		return
 	var query: String = _search.text.strip_edges().to_lower()
-	for room in author.layout.rooms:
+	for room in author.get_edit_layout().rooms:
 		if room == null:
 			continue
 		if _filter.selected == 1 and not room.edit_locked:
@@ -410,11 +419,11 @@ func _fill_rooms() -> void:
 		if _filter.selected == 2 and not room.authored_override_active:
 			continue
 		var role: String = RoomPlacementData.Role.keys()[int(room.role)].capitalize()
-		if not query.is_empty() and not room.stable_id.to_lower().contains(query) and not role.to_lower().contains(query):
+		if not query.is_empty() and not room.stable_id.to_lower().contains(query) and not role.to_lower().contains(query) and not str(room.purpose).contains(query):
 			continue
 		var markers := (" [L]" if room.edit_locked else "") + (" [E]" if room.authored_override_active else "")
 		_room_ids.append(room.stable_id)
-		_room_list.add_item(room.stable_id + "  ·  " + role + markers)
+		_room_list.add_item(room.stable_id + "  ·  " + (str(room.purpose).capitalize() if not room.purpose.is_empty() else role) + markers)
 		if room.stable_id == author.selected_room_id:
 			_room_list.select(_room_ids.size() - 1)
 
@@ -431,7 +440,13 @@ func _refresh() -> void:
 		_tracked_layout = null
 		_tracked_id = ""
 		return
-	_tracked_layout = author.layout
+	_floor_picker.clear()
+	var floor_count: int = author.layout.floors.size() if author.layout is BuildingLayout else 1
+	for index in floor_count:
+		_floor_picker.add_item("Floor %d" % (index + 1))
+	_floor_picker.select(clampi(author.selected_floor, 0, maxi(0, floor_count - 1)))
+	_floor_picker.disabled = floor_count <= 1
+	_tracked_layout = author.get_edit_layout()
 	_tracked_id = author.selected_room_id
 	if author.config != _palette_source or _module_profiles.is_empty():
 		_fill_palette()
@@ -441,18 +456,20 @@ func _refresh() -> void:
 			if _stamp_wall.get_item_id(i) == author.stamp_wall_choice:
 				_stamp_wall.select(i)
 				break
-	if author.layout == null:
+	if author.get_edit_layout() == null:
 		_details.text = "Generate a layout to begin."
 		_status.text = "No layout yet."
 		return
 	var found: RoomPlacementData
-	for room in author.layout.rooms:
+	for room in author.get_edit_layout().rooms:
 		if room.stable_id == author.selected_room_id:
 			found = room
 			break
-	_status.text = "%d rooms  ·  %d connections" % [author.layout.rooms.size(), author.layout.connections.size()]
+	_status.text = "%d rooms  ·  %d connections" % [author.get_edit_layout().rooms.size(), author.get_edit_layout().connections.size()]
+	if author.layout is BuildingLayout:
+		_status.text = "Floor %d/%d · " % [clampi(author.selected_floor, 0, author.layout.floors.size() - 1) + 1, author.layout.floors.size()] + _status.text
 	if found != null:
-		var size: Vector3 = DungeonPlanner.actual_size(author.layout, found)
+		var size: Vector3 = DungeonPlanner.actual_size(author.get_edit_layout(), found)
 		_details.text = "%s · %s\n%.1f × %.1f m | %d links | %s" % [
 			found.stable_id, RoomPlacementData.Role.keys()[int(found.role)],
 			size.x, size.z, _count_links(found.stable_id),
@@ -464,7 +481,7 @@ func _refresh() -> void:
 
 func _count_links(room_id: String) -> int:
 	var count: int = 0
-	for edge in author.layout.connections:
+	for edge in author.get_edit_layout().connections:
 		if edge.from_room_id == room_id or edge.to_room_id == room_id:
 			count += 1
 	return count

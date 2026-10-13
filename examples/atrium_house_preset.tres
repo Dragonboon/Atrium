@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="DungeonConfig" load_steps=5 format=3]
+[ext_resource type="Script" path="res://addons/room_creator/src/next/dungeon/dungeon_config.gd" id="1"]
+[sub_resource type="StandardMaterial3D" id="Walls"]
+albedo_color = Color(0.65, 0.67, 0.59, 1)
+[sub_resource type="StandardMaterial3D" id="Floor"]
+albedo_color = Color(0.32, 0.23, 0.16, 1)
+[sub_resource type="StandardMaterial3D" id="Ceiling"]
+albedo_color = Color(0.82, 0.80, 0.72, 1)
+[resource]
+script = ExtResource("1")
+algorithm = 3
+floor_count = 2
+floor_height = 4.0
+grid_size = Vector2i(3, 3)
+critical_path_min = 3
+critical_path_max = 3
+branch_count = 6
+room_size = Vector3(4, 3, 4)
+wall_material = SubResource("Walls")
+floor_material = SubResource("Floor")
+ceiling_material = SubResource("Ceiling")
