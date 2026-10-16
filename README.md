@@ -1,15 +1,26 @@
-# Atrium
+<p align="center">
+  <img src="docs/assets/atrium-mark.svg" width="144" height="144" alt="Atrium — connected rooms and architectural spaces">
+</p>
 
-**Create rooms, dungeons and multi-storey building blockouts in Godot.**
+<h1 align="center">Atrium</h1>
+
+<p align="center"><strong>Create rooms, dungeons and multi-storey building blockouts in Godot.</strong></p>
+
+<p align="center">
+  <a href="https://godotengine.org/"><img src="https://img.shields.io/badge/Godot-4.7.2-478CBF?logo=godotengine&amp;logoColor=white" alt="Godot 4.7.2"></a>
+  <a href="addons/room_creator/plugin.cfg"><img src="https://img.shields.io/badge/addon-1.17.0-334155" alt="Addon 1.17.0"></a>
+  <a href="https://github.com/Dragonboon/Atrium/actions/workflows/godot-ci.yml"><img src="https://github.com/Dragonboon/Atrium/actions/workflows/godot-ci.yml/badge.svg" alt="Validation"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2E8540" alt="MIT license"></a>
+</p>
+
+<p align="center">
+  <a href="#get-started">Get started</a> ·
+  <a href="#what-you-can-build">Capabilities</a> ·
+  <a href="#documentation">Documentation</a> ·
+  <a href="#current-limits">Current limits</a>
+</p>
 
 Atrium is an editor-first 3D authoring addon that combines procedural generation with controlled manual editing. Build a layout from a seed, refine individual rooms, validate connections and export an editable native Godot scene with static collisions.
-
-[![Godot 4.7.2](https://img.shields.io/badge/Godot-4.7.2-478CBF?logo=godotengine&logoColor=white)](https://godotengine.org/)
-[![Addon 1.17.0](https://img.shields.io/badge/addon-1.17.0-334155)](addons/room_creator/plugin.cfg)
-[![Validation](https://github.com/Dragonboon/Atrium/actions/workflows/godot-ci.yml/badge.svg)](https://github.com/Dragonboon/Atrium/actions/workflows/godot-ci.yml)
-[![MIT](https://img.shields.io/badge/license-MIT-2E8540)](LICENSE)
-
-[Get started](#get-started) · [Capabilities](#what-you-can-build) · [Documentation](#documentation) · [Current limits](#current-limits)
 
 ## What you can build
 

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" fill="none">
+  <title>Atrium — connected spaces</title>
+  <desc>An open architectural room with a doorway and three connected floor modules.</desc>
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="#101D32"/>
+  <path d="M128 39 211 87v83l-83 48-83-48V87Z" fill="#182C47"/>
+  <path d="m45 87 83 48 83-48M128 135v83" stroke="#324B68" stroke-width="2"/>
+  <path d="m58 94 70-40 70 40v67l-70 41-70-41Z" fill="#24435E"/>
+  <path d="m58 94 70 40v68l-70-41Z" fill="#37647D"/>
+  <path d="m128 134 70-40v67l-70 41Z" fill="#213D58"/>
+  <path d="m58 94 70-40 70 40-70 40Z" fill="#65D6CD"/>
+  <path d="m73 94 55-32 55 32-55 32Z" fill="#13283E"/>
+  <path d="M128 62v41l-35 20-20-29Z" fill="#28465D"/>
+  <path d="m128 103 35 20 20-29-55-32Z" fill="#1D354D"/>
+  <path d="m93 113 35-20 35 20-35 21Z" fill="#A0EEE3"/>
+  <path d="m151 188 27-16v-43l-27 16Z" fill="#101D32"/>
+  <path d="M151 185v-40l27-16v40" stroke="#F6C879" stroke-width="6" stroke-linejoin="round"/>
+  <path d="m74 144 20 12 16-9M94 156v17" stroke="#A0EEE3" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="74" cy="144" r="5" fill="#A0EEE3"/>
+  <circle cx="110" cy="147" r="5" fill="#A0EEE3"/>
+  <circle cx="94" cy="173" r="5" fill="#F6C879"/>
+</svg>
